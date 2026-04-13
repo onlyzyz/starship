@@ -10,21 +10,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install Nightly Rust
+        # 必须使用 nightly 版本才能使用 -Z build-std
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly
+          components: rust-src # 必须包含源码才能现场编译标准库
 
       - name: Install Cross
         run: cargo install cross --git https://github.com/cross-rs/cross.git
 
       - name: Build Starship with Cross
-        # 显式指定 Cross.toml 所在的路径（当前目录）
+        # 核心改动：加入 -Z build-std
         run: |
-          cross build --release --target mipsel-unknown-linux-musl --verbose
+          cross build --release \
+            --target mipsel-unknown-linux-musl \
+            -Z build-std=std,panic_abort
         env:
           RUSTFLAGS: "-C target-feature=+crt-static"
 
       - name: Post Process (Strip)
-        # 编译成功后，移除调试符号以减小体积
         run: |
           docker run --rm -v $(pwd):/work -w /work \
           ghcr.io/cross-rs/mipsel-unknown-linux-musl:latest \
