@@ -1,7 +1,7 @@
 name: MIPS Build for CR6606
 
 on:
-  workflow_dispatch: # 允许手动点击运行
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,7 +12,6 @@ jobs:
 
       - name: Install Stable Rust
         uses: dtolnay/rust-toolchain@stable
-        # 注意：这里不再添加 targets 参数，完全交给 Cross 处理
 
       - name: Install Cross
         run: cargo install cross --git https://github.com/cross-rs/cross.git
@@ -21,13 +20,15 @@ jobs:
         run: |
           cross build --release --target mipsel-unknown-linux-musl
         env:
-          # 核心修复：关闭 LTO 避免位码检查错误，强制静态链接
           CARGO_PROFILE_RELEASE_LTO: "false"
           CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "1"
-          RUSTFLAGS: "-C target-feature=+crt-static"
+          # 核心修复：显式指定使用容器内的 mipsel 链接器，防止它误用宿主机的 ld
+          RUSTFLAGS: >-
+            -C linker=mipsel-linux-musl-gcc
+            -C target-feature=+crt-static
+            -C link-arg=-static
 
       - name: Post Process (Strip)
-        # 移除调试符号，能让体积从几十 MB 缩减到 3MB 左右
         run: |
           docker run --rm -v $(pwd):/work -w /work \
           messense/rust-musl-cross:mipsel-musl \
