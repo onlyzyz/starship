@@ -1,0 +1,37 @@
+name: Cross-Compile Starship for MIPS (Forked)
+
+on:
+  workflow_dispatch: # 方便你手动点按钮开始编译
+
+jobs:
+  build_mips:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: mips-unknown-linux-musl
+
+      - name: Install Cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build Binary
+        # 直接使用 cross 编译当前目录下的源码
+        run: |
+          cross build --release --target mips-unknown-linux-musl --features vendored-openssl
+
+      - name: Compress Binary
+        run: |
+          # 这一步尝试减小体积，如果报错可以先注释掉
+          # 注意：cross 的输出路径通常是 target/<target>/release/starship
+          ls -lh target/mips-unknown-linux-musl/release/starship
+          strip target/mips-unknown-linux-musl/release/starship || true
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: starship-mips-be
+          path: target/mips-unknown-linux-musl/release/starship
