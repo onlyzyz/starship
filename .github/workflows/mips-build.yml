@@ -10,26 +10,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Nightly Rust
-        uses: dtolnay/rust-toolchain@nightly
+      - name: Install Stable Rust
+        # 回到稳定版，不需要 nightly，不需要 rust-src
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: nightly
-          components: rust-src
+          targets: mipsel-unknown-linux-musl
 
       - name: Install Cross
         run: cargo install cross --git https://github.com/cross-rs/cross.git
 
       - name: Build Starship
-        # 注意：这里去掉了手动传的 -Z 参数，cross 会读取 Cross.toml 里的配置
+        # 直接编译，镜像会处理好一切
         run: |
           cross build --release --target mipsel-unknown-linux-musl
         env:
           RUSTFLAGS: "-C target-feature=+crt-static"
 
       - name: Post Process (Strip)
+        # 移除符号表，确保你的小米路由器能放下它
         run: |
           docker run --rm -v $(pwd):/work -w /work \
-          ghcr.io/cross-rs/mipsel-unknown-linux-musl:latest \
+          messense/rust-musl-cross:mipsel-musl \
           mipsel-linux-musl-strip target/mipsel-unknown-linux-musl/release/starship
 
       - name: Upload Binary
