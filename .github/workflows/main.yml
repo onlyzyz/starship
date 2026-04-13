@@ -1,7 +1,7 @@
-name: Cross-Compile Starship for MIPS (Forked)
+name: Cross-Compile Starship for MIPS (Fixed)
 
 on:
-  workflow_dispatch: # 方便你手动点按钮开始编译
+  workflow_dispatch:
 
 jobs:
   build_mips:
@@ -10,8 +10,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust (Nightly)
+        # 既然 Stable 没有预编译库，我们换成 Nightly
+        uses: dtolnay/rust-toolchain@nightly
         with:
           targets: mips-unknown-linux-musl
 
@@ -19,17 +20,15 @@ jobs:
         run: cargo install cross --git https://github.com/cross-rs/cross
 
       - name: Build Binary
-        # 直接使用 cross 编译当前目录下的源码
+        # 这里是核心修改：
+        # 1. 强制使用 Nightly 编译
+        # 2. 增加 -Z build-std 允许自动编译 Rust 标准库
         run: |
-          cross build --release --target mips-unknown-linux-musl --features vendored-openssl
-
-      - name: Compress Binary
-        run: |
-          # 这一步尝试减小体积，如果报错可以先注释掉
-          # 注意：cross 的输出路径通常是 target/<target>/release/starship
-          ls -lh target/mips-unknown-linux-musl/release/starship
-          strip target/mips-unknown-linux-musl/release/starship || true
-
+          cross build --release \
+            --target mips-unknown-linux-musl \
+            --features vendored-openssl \
+            -Z build-std
+          
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
