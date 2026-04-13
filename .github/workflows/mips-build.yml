@@ -11,22 +11,22 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust
+        # 这里只安装稳定的 Rust 编译器，不需要指定 target
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: mipsel-unknown-linux-musl
 
       - name: Install Cross
         run: cargo install cross --git https://github.com/cross-rs/cross.git
 
-      - name: Build Starship
-        # 添加环境变量优化体积
+      - name: Build Starship with Cross
+        # 让 Cross 自动拉取包含编译环境的 Docker 镜像
         run: |
           cross build --release --target mipsel-unknown-linux-musl
         env:
+          # 强制静态链接
           RUSTFLAGS: "-C target-feature=+crt-static"
 
       - name: Post Process (Strip)
-        # 使用 cross 容器内的工具进行 strip 减小体积，否则路由器可能放不下
+        # 这一步非常重要，能把 50MB 的二进制缩减到 3MB 左右
         run: |
           docker run --rm -v $(pwd):/work -w /work \
           ghcr.io/cross-rs/mipsel-unknown-linux-musl:latest \
@@ -35,5 +35,5 @@ jobs:
       - name: Upload Binary
         uses: actions/upload-artifact@v4
         with:
-          name: starship-cr6606
+          name: starship-mipsel-cr6606
           path: target/mipsel-unknown-linux-musl/release/starship
