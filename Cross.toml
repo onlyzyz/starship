@@ -1,2 +1,7 @@
 [target.mipsel-unknown-linux-musl]
 image = "ghcr.io/cross-rs/mipsel-unknown-linux-musl:latest"
+
+[target.mipsel-unknown-linux-musl.build-std]
+# 让 cross 在容器内部自动处理标准库编译
+# 这样它就能找到 crt1.o 等链接文件
+features = ["std", "panic_abort"]
