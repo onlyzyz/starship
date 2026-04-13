@@ -1,0 +1,39 @@
+name: MIPS Build for CR6606
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: mipsel-unknown-linux-musl
+
+      - name: Install Cross
+        run: cargo install cross --git https://github.com/cross-rs/cross.git
+
+      - name: Build Starship
+        # 添加环境变量优化体积
+        run: |
+          cross build --release --target mipsel-unknown-linux-musl
+        env:
+          RUSTFLAGS: "-C target-feature=+crt-static"
+
+      - name: Post Process (Strip)
+        # 使用 cross 容器内的工具进行 strip 减小体积，否则路由器可能放不下
+        run: |
+          docker run --rm -v $(pwd):/work -w /work \
+          ghcr.io/cross-rs/mipsel-unknown-linux-musl:latest \
+          mipsel-linux-musl-strip target/mipsel-unknown-linux-musl/release/starship
+
+      - name: Upload Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: starship-cr6606
+          path: target/mipsel-unknown-linux-musl/release/starship
