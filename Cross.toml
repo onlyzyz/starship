@@ -1,5 +1,2 @@
 [target.mipsel-unknown-linux-musl]
-image = "ghcr.io/cross-rs/mipsel-unknown-linux-musl:latest"
-
-# 使用这种数组格式，直接告诉 cross 需要编译的标准库组件
-build-std = ["std", "panic_abort"]
+image = "messense/rust-musl-cross:mipsel-musl"
